@@ -104,7 +104,7 @@ while read -r protocol address port function; do
                 fi
         else
                 # use cat for checking port 9876
-   if timeout 2s cat < /dev/null > /dev/tcp/"$address"/$port; then
+		if timeout 2s cat < /dev/null > /dev/tcp/"$address"/$port; then
                         endpoint_status=1
                 fi
         fi
