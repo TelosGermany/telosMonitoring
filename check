@@ -1,0 +1,255 @@
+#!/bin/bash
+
+# Author: TelosGermany
+# Mail: contact@telosgermany.io
+# Telegram: t.me/TelosGermany
+# Monitoring Script 
+
+# initalize variable
+p2p_port="9876"
+https_port="443"
+http_port="8888"
+portal_port="3000"
+
+# initial endpoint status
+endpoint_status=0
+
+# initial status portal
+status_portal=1
+
+# request chain
+chain_request="/v1/chain/get_info"
+
+# initial lastreceive_stderr
+lastreceive_stderr=""
+
+# initial break count
+break_count=0
+
+# minimum size for stderr 
+stderr_size=250000
+
+# count for restart 
+restart_count="0"
+
+# count of minutes and value for received blocks
+rec_min=5
+count_block=570
+
+# directory telosportal
+telos_portal=/home/telosportal/telosPortal
+
+# backup file
+backup_file=backup_active.txt
+
+# break file
+break_file=break.txt
+
+# director monitor 
+dir_mon=/home/telos/monitor
+
+# error definition file
+def_error=/home/telos/monitor/def_error.txt
+
+# location error log file
+error_log=/home/telos/monitor/error.log
+
+#location result log file
+result_log=/home/telos/monitor/result.log
+
+# location log file
+stderr_log=/home/telos/telosdata/data/stderr.txt
+
+# directory rules
+rules_dir=/home/telos/monitor/rules
+
+# location endpoint file
+endpoint=/home/telos/monitor/endpoint.txt
+
+# script for restart nodeos
+nodeos_control=/home/telos/cnod
+
+# variable for nodeos pid
+nodeos_pid=$(pgrep nodeos)
+telosportal_pid=$(pgrep "node" -x -o -l)
+
+# start and end time to check amount of received blocks
+time_end=$(date +%H:%M:%S)
+time_start=$(date +%H:%M:%S --date '-'$rec_min' min')
+
+echo "*******************************" | tee -a $result_log
+echo "start: $time_start" | tee -a $result_log
+echo "end: $time_end"  | tee -a $result_log
+echo  "******************************" | tee -a $result_log
+
+# display information
+echo "available endpoints *** 1=True *** 0=False ***" | tee -a $result_log
+
+# read endpoint file
+# set the Internal Field Seperator to ,
+IFS=','
+while read -r protocol address port function; do
+        # if port 443,8888, 3000 than curl, for 9876 cat
+        if (($port ==  $https_port)) || (($port == $http_port)) || (($port == $portal_port)); then
+                if (($port == $portal_port)); then
+                        # if 3000 
+                        if curl --connect-timeout 2 -s --request POST --url $protocol://$address:$port > /dev/null; then
+                                endpoint_status=1
+                        fi
+                elif (($port == $https_port)) || (($port == $http_port)); then
+                        # user curl for port 443,8888
+                        if curl --connect-timeout 2 -s --request POST --url $protocol://$address:$port/$chain_request > /dev/null; then
+                                endpoint_status=1
+                        fi
+                fi
+        else
+                # use cat for checking port 9876
+   if timeout 2s cat < /dev/null > /dev/tcp/"$address"/$port; then
+                        endpoint_status=1
+                fi
+        fi
+
+        # display result        
+        echo "$function $protocol://$address:$port Availibility: $endpoint_status" | tee -a $result_log
+
+        # if function portal and status is 0 then set status_portal = 0
+        if [[ "$function" ==  "portal" ]] && [[ $endpoint_status == 0 ]]; then
+                status_portal=0
+        fi
+        endpoint_status=0
+done < "$endpoint"
+
+echo  "******************************" | tee -a $result_log | tee -a $result_log
+
+# check if portal is down on one node, if down than restart
+if (($status_portal == 0 )); then
+        echo "minium portal on one node is down." | tee -a $result_log
+
+        # check if telosportal directory exists and process telosportal is running 
+        # if [  -d "$telos_portal" ] && [ -z "$telosportal_pid" ]; then
+        if [ -d "$telos_portal" ]; then
+                if [ -n "$telosportal_pid" ]; then
+                        echo "telosportal is running, but port not listening. restart nodeos" | tee -a $result_log
+
+                        # restart telosportal
+                        echo $telosportal_pid
+                        kill $(cut -d ' ' -f 1 <<< $telosportal_pid)
+                        echo "telosportal process $telosportal_pid stopped"
+                fi
+                echo "start telosportal" | tee -a $result_log
+
+                # start telosportal
+                cd /home/telosportal/telosPortal
+                npm run start:production &>/dev/null &disown;
+                sleep 1
+                telosportal_pid=$(pgrep "node" -x -o -l)
+                echo "new process telosportal: $telosportal_pid"
+                echo  "******************************" | tee -a $result_log | tee -a $result_log
+        fi
+fi
+
+# Check if stderr.txt > 250 kb or nodeos process is not running or backup is active
+if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || [ -f "$dir_mon/$backup_file" ]; then
+
+# check if backup is active
+	if [ -f "$dir_mon/$backup_file" ]; then
+                echo "currently backup is active. nodeos not running. not checking stderr.txt"
+                exit
+     	fi
+
+        # read first charakter of break.txt
+        break_count=$(head -c 1 $dir_mon/$break_file)
+
+        # check if nodoes is running, if yes but filesize stderr.txt do not increase then stop an strestart nodeos via cnod
+        if [ -n "$nodeos_pid" ]; then
+                echo "nodeos process running but file size stderr.txt to small" | tee -a $result_log
+
+                # count up break count
+                if (( $break_count < 2 )); then
+                        break_count=$((break_count+1))
+                        echo "$break_count" > $dir_mon/$break_file
+                else
+
+                        # stop and restart nodeos
+                        $nodeos_control restart
+
+                        # reset break counter
+                        echo "0" > $dir_mon/$break_file
+                        exit
+                fi
+        else
+
+                # nodeos process is not running, start nodeos via cnod
+                $nodeos_control start
+
+                # reset break counter
+                echo "0" > $dir_mon/$break_file
+                exit
+        fi
+        echo "not checking stderr.txt" | tee -a $result_log
+        echo " " | tee -a $result_log
+else
+
+        # cut hours and minute from last received block entry 
+        lastreceive_stderr=$(grep "Received block" $stderr_log |tail -n 1 | cut -c 18-25)
+
+        # convert to seconds, if no received block found than set any value
+        if [ -z "$lastreceive_stderr" ]; then
+                lastreceive_sec=1500
+        else
+                lastreceive_sec=$(date -d $lastreceive_stderr +%s)
+        fi
+        # query if blocks received recently, if not change restart_count to 1 
+        if [[ $lastreceive_sec -ge $(date +%s --date '-'$rec_min' min') ]]; then
+                status="receiving blocks OK"
+        else
+                status="receiving blocks NOT OK"
+                restart_count=1
+        fi
+
+        # display status
+        echo "current time: $(date +%H:%M:%S), last time received blocks: $lastreceive_stderr, $status" | tee -a $result_log
+        echo  "******************************" | tee -a $result_log
+
+        # check amount of received blocks  
+        blocks=$(sed  "/${time_start}/,/${time_end}/! d" $stderr_log | egrep -f $rules_dir/received_blocks | wc -l)
+
+        # check amount of received blocks
+        if [[ ($blocks -le $count_block ) ]]; then
+                status="sync status NOT OK"
+                restart_count=1
+        else
+                status="sync status OK"
+        fi
+
+        # display status
+        echo "check amount of received blocks, blocks: $blocks, $status" | tee -a $result_log
+
+        # if restart_count  = 1 restart nodeos
+        if [ $restart_count == 1 ]; then
+                $nodeos_control restart
+        fi
+        echo  "******************************" | tee -a $result_log
+
+        # read defintion error file
+        # set the Internal Field Seperator to ,
+        IFS=','
+        while read -r error_desc error_rating action; do
+
+                # check errors and write it to error logfile
+                error_reading=$(sed  "/${time_start}/,/${time_end}/! d" $stderr_log | egrep -f $rules_dir/$error_desc | tee -a $error_log | wc -l)
+
+                # if no error message received set 0
+                if [ -z "$error_reading" ]; then
+                        error_reading=0
+                fi
+
+                # display status
+                echo "$error_desc, count: $error_reading, status: $error_rating, action: $action" | tee -a $result_log
+            	echo  "******************************" | tee -a $result_log
+        done < "$def_error"
+        echo " " | tee -a $result_log
+
+        # reset break count
+        echo "0" > $dir_mon/break.txt
+fi
