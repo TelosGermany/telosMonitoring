@@ -1,2 +1,0 @@
-error_reading_message_from,UNCRITICAL,NO ACTION
-error_incoming_message_length,UNCRITICAL,NO ACTION
