@@ -28,13 +28,13 @@ count_block=570
 # directory telosportal
 telos_portal=/home/telosportal/telosPortal
 
-# backup file
+# file if backup active
 backup_file=backup_active.txt
 
 # break file
 break_file=break.txt
 
-# director monitor 
+# directory monitor 
 dir_mon=/home/telos/monitor
 
 # error definition file
