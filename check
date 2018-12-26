@@ -4,6 +4,7 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Monitoring Script 
+# Version 1.1, 26.12.2018
 
 # initalize variable
 p2p_port="9876"
@@ -45,7 +46,7 @@ backup_file=backup_active.txt
 # break file
 break_file=break.txt
 
-# director monitor 
+# directory monitor 
 dir_mon=/home/telos/monitor
 
 # error definition file
@@ -74,8 +75,8 @@ nodeos_pid=$(pgrep nodeos)
 telosportal_pid=$(pgrep "node" -x -o -l)
 
 # start and end time to check amount of received blocks
-time_end=$(date +%H:%M:%S)
-time_start=$(date +%H:%M:%S --date '-'$rec_min' min')
+time_end=$(date +%Y-%m-%dT%H:%M:%S)
+time_start=$(date +%Y-%m-%dT%H:%M:%S --date '-'$rec_min' min')
 
 echo "*******************************" | tee -a $result_log
 echo "start: $time_start" | tee -a $result_log
@@ -89,6 +90,7 @@ echo "available endpoints *** 1=True *** 0=False ***" | tee -a $result_log
 # set the Internal Field Seperator to ,
 IFS=','
 while read -r protocol address port function; do
+
         # if port 443,8888, 3000 than curl, for 9876 cat
         if (($port ==  $https_port)) || (($port == $http_port)) || (($port == $portal_port)); then
                 if (($port == $portal_port)); then
@@ -103,8 +105,9 @@ while read -r protocol address port function; do
                         fi
                 fi
         else
+
                 # use cat for checking port 9876
-		if timeout 2s cat < /dev/null > /dev/tcp/"$address"/$port; then
+                if timeout 2s cat < /dev/null > /dev/tcp/"$address"/$port; then
                         endpoint_status=1
                 fi
         fi
@@ -151,11 +154,11 @@ fi
 # Check if stderr.txt > 250 kb or nodeos process is not running or backup is active
 if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || [ -f "$dir_mon/$backup_file" ]; then
 
-# check if backup is active
-	if [ -f "$dir_mon/$backup_file" ]; then
+        # check if backup is active
+        if [ -f "$dir_mon/$backup_file" ]; then
                 echo "currently backup is active. nodeos not running. not checking stderr.txt"
                 exit
-     	fi
+        fi
 
         # read first charakter of break.txt
         break_count=$(head -c 1 $dir_mon/$break_file)
@@ -189,9 +192,9 @@ if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || 
         echo "not checking stderr.txt" | tee -a $result_log
         echo " " | tee -a $result_log
 else
-
-        # cut hours and minute from last received block entry 
-        lastreceive_stderr=$(grep "Received block" $stderr_log |tail -n 1 | cut -c 18-25)
+	
+	# cut hours and minute from last received block entry 
+        lastreceive_stderr=$(grep "Received block" $stderr_log |tail -n 1 | cut -c 7-25)
 
         # convert to seconds, if no received block found than set any value
         if [ -z "$lastreceive_stderr" ]; then
@@ -199,6 +202,7 @@ else
         else
                 lastreceive_sec=$(date -d $lastreceive_stderr +%s)
         fi
+
         # query if blocks received recently, if not change restart_count to 1 
         if [[ $lastreceive_sec -ge $(date +%s --date '-'$rec_min' min') ]]; then
                 status="receiving blocks OK"
@@ -208,7 +212,7 @@ else
         fi
 
         # display status
-        echo "current time: $(date +%H:%M:%S), last time received blocks: $lastreceive_stderr, $status" | tee -a $result_log
+        echo "current time: $(date +%Y-%m-%dT%H:%M:%S), last time received blocks: $lastreceive_stderr, $status" | tee -a $result_log
         echo  "******************************" | tee -a $result_log
 
         # check amount of received blocks  
@@ -236,7 +240,7 @@ else
         IFS=','
         while read -r error_desc error_rating action; do
 
-                # check errors and write it to error logfile
+		# check errors and write it to error logfile
                 error_reading=$(sed  "/${time_start}/,/${time_end}/! d" $stderr_log | egrep -f $rules_dir/$error_desc | tee -a $error_log | wc -l)
 
                 # if no error message received set 0
@@ -246,7 +250,7 @@ else
 
                 # display status
                 echo "$error_desc, count: $error_reading, status: $error_rating, action: $action" | tee -a $result_log
-            	echo  "******************************" | tee -a $result_log
+                echo  "******************************" | tee -a $result_log
         done < "$def_error"
         echo " " | tee -a $result_log
 
