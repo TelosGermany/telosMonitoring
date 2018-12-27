@@ -122,31 +122,28 @@ while read -r protocol address port function; do
         # if function portal and status is 0 then set status_portal = 0
         if [[ "$function" ==  "portal" ]] && [[ $endpoint_status == 0 ]]; then
                 status_portal=0
-                # check if portal is down on this node, if down than restart
-                if (($status_portal == 0 )); then
-                        echo "minium portal on one node is down." | tee -a $result_log
+		echo "minium portal on one node is down." | tee -a $result_log
 
-                        # check if telosportal directory exists and if ip is own ip
-                        if [ -d "$telos_portal" ] && [ $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}') == "$address" ]; then
-                                echo "portal on this node is not responding."
-                                if [ -n "$telosportal_pid" ]; then
-                                        echo "restart portal." | tee -a $result_log
+                # check if telosportal directory exists and if ip is own ip
+                if [ -d "$telos_portal" ] && [ $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}') == "$address" ]; then
+                        echo "portal on this node is not responding."
+                        if [ -n "$telosportal_pid" ]; then
+                                echo "restart portal." | tee -a $result_log
 
-                                        # restart telosportal
-                                        echo $telosportal_pid
-                                        kill $(cut -d ' ' -f 1 <<< $telosportal_pid)
-					echo "portal process $telosportal_pid stopped"
-                                fi
-                                echo "start portal." | tee -a $result_log
-
-                                # start telosportal
-                                cd /home/telosportal/telosPortal
-                                npm run start:production &>/dev/null &disown;
-                                sleep 1
-                                telosportal_pid=$(pgrep "node" -x -o -l)
-                                echo "new process telosportal: $telosportal_pid"
-                                echo  "******************************" | tee -a $result_log | tee -a $result_log
+                                # restart telosportal
+                                echo $telosportal_pid
+                                kill $(cut -d ' ' -f 1 <<< $telosportal_pid)
+                                echo "portal process $telosportal_pid stopped"
                         fi
+                        echo "start portal." | tee -a $result_log
+
+                        # start telosportal
+                        cd /home/telosportal/telosPortal
+                        npm run start:production &>/dev/null &disown;
+                        sleep 1
+                        telosportal_pid=$(pgrep "node" -x -o -l)
+                        echo "new process telosportal: $telosportal_pid"
+                        echo  "******************************" | tee -a $result_log | tee -a $result_log
                 fi
 
         fi
