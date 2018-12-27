@@ -4,13 +4,15 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Monitoring Script 
-# Version 1.1, 26.12.2018
+# Version 1.2, 27.12.2018
 
 # initalize variable
 p2p_port="9876"
 https_port="443"
 http_port="8888"
 portal_port="3000"
+
+network_interface="ens5"
 
 # initial endpoint status
 endpoint_status=0
@@ -94,11 +96,13 @@ while read -r protocol address port function; do
         # if port 443,8888, 3000 than curl, for 9876 cat
         if (($port ==  $https_port)) || (($port == $http_port)) || (($port == $portal_port)); then
                 if (($port == $portal_port)); then
+
                         # if 3000 
                         if curl --connect-timeout 2 -s --request POST --url $protocol://$address:$port > /dev/null; then
                                 endpoint_status=1
                         fi
                 elif (($port == $https_port)) || (($port == $http_port)); then
+
                         # user curl for port 443,8888
                         if curl --connect-timeout 2 -s --request POST --url $protocol://$address:$port/$chain_request > /dev/null; then
                                 endpoint_status=1
@@ -118,38 +122,38 @@ while read -r protocol address port function; do
         # if function portal and status is 0 then set status_portal = 0
         if [[ "$function" ==  "portal" ]] && [[ $endpoint_status == 0 ]]; then
                 status_portal=0
+                # check if portal is down on this node, if down than restart
+                if (($status_portal == 0 )); then
+                        echo "minium portal on one node is down." | tee -a $result_log
+                        echo "$telos_portal $address $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}')"
+
+                        # check if telosportal directory exists and if ip is own ip
+                        if [ -d "$telos_portal" ] && [ $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}') == "$address" ]; then
+                                echo "portal on this node is not responding."
+                                if [ -n "$telosportal_pid" ]; then
+                                        echo "restart portal." | tee -a $result_log
+
+                                        # restart telosportal
+                                        echo $telosportal_pid
+                                        kill $(cut -d ' ' -f 1 <<< $telosportal_pid)
+					echo "portal process $telosportal_pid stopped"
+                                fi
+                                echo "start portal." | tee -a $result_log
+
+                                # start telosportal
+                                cd /home/telosportal/telosPortal
+                                npm run start:production &>/dev/null &disown;
+                                sleep 1
+                                telosportal_pid=$(pgrep "node" -x -o -l)
+                                echo "new process telosportal: $telosportal_pid"
+                                echo  "******************************" | tee -a $result_log | tee -a $result_log
+                        fi
+                fi
+
         fi
         endpoint_status=0
 done < "$endpoint"
-
 echo  "******************************" | tee -a $result_log | tee -a $result_log
-
-# check if portal is down on one node, if down than restart
-if (($status_portal == 0 )); then
-        echo "minium portal on one node is down." | tee -a $result_log
-
-        # check if telosportal directory exists and process telosportal is running 
-        # if [  -d "$telos_portal" ] && [ -z "$telosportal_pid" ]; then
-        if [ -d "$telos_portal" ]; then
-                if [ -n "$telosportal_pid" ]; then
-                        echo "telosportal is running, but port not listening. restart nodeos" | tee -a $result_log
-
-                        # restart telosportal
-                        echo $telosportal_pid
-                        kill $(cut -d ' ' -f 1 <<< $telosportal_pid)
-                        echo "telosportal process $telosportal_pid stopped"
-                fi
-                echo "start telosportal" | tee -a $result_log
-
-                # start telosportal
-                cd /home/telosportal/telosPortal
-                npm run start:production &>/dev/null &disown;
-                sleep 1
-                telosportal_pid=$(pgrep "node" -x -o -l)
-                echo "new process telosportal: $telosportal_pid"
-                echo  "******************************" | tee -a $result_log | tee -a $result_log
-        fi
-fi
 
 # Check if stderr.txt > 250 kb or nodeos process is not running or backup is active
 if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || [ -f "$dir_mon/$backup_file" ]; then
@@ -192,8 +196,8 @@ if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || 
         echo "not checking stderr.txt" | tee -a $result_log
         echo " " | tee -a $result_log
 else
-	
-	# cut hours and minute from last received block entry 
+
+        # cut hours and minute from last received block entry 
         lastreceive_stderr=$(grep "Received block" $stderr_log |tail -n 1 | cut -c 7-25)
 
         # convert to seconds, if no received block found than set any value
@@ -226,7 +230,7 @@ else
                 status="sync status OK"
         fi
 
-        # display status
+	# display status
         echo "check amount of received blocks, blocks: $blocks, $status" | tee -a $result_log
 
         # if restart_count  = 1 restart nodeos
@@ -240,7 +244,7 @@ else
         IFS=','
         while read -r error_desc error_rating action; do
 
-		# check errors and write it to error logfile
+                # check errors and write it to error logfile
                 error_reading=$(sed  "/${time_start}/,/${time_end}/! d" $stderr_log | egrep -f $rules_dir/$error_desc | tee -a $error_log | wc -l)
 
                 # if no error message received set 0
@@ -257,3 +261,4 @@ else
         # reset break count
         echo "0" > $dir_mon/break.txt
 fi
+
