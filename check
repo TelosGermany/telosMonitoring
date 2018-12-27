@@ -125,7 +125,6 @@ while read -r protocol address port function; do
                 # check if portal is down on this node, if down than restart
                 if (($status_portal == 0 )); then
                         echo "minium portal on one node is down." | tee -a $result_log
-                        echo "$telos_portal $address $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}')"
 
                         # check if telosportal directory exists and if ip is own ip
                         if [ -d "$telos_portal" ] && [ $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}') == "$address" ]; then
