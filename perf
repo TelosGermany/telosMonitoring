@@ -1,0 +1,88 @@
+#!/bin/bash
+
+# Author: TelosGermany
+# Mail: contact@telosgermany.io
+# Telegram: t.me/TelosGermany
+# Check Performance CPU RAM
+# Version 1.0, 30.12.2018
+
+# perform sysbench cpu and ram performance test (package sysbench required)
+sysb_test_enabled=0
+sysb_max_prime=10000
+sysb_threads=1
+sysb_ram_transfer="20G"
+sysb_ram_blocksize="1M"
+sysb_ram_result=""
+sysb_ram_last_results=""
+sysb_cpu_last_results=""
+sysb_last_counts=5
+status_sysbench=""
+
+#location result log file
+performance_log=/home/telos/monitor/performance.log
+
+# check if package sysbench is installed
+status_sysbench=$(dpkg -s sysbench)
+if [ -z "$status_sysbench" ]; then
+        echo "package sysbench not installed! insall it now (y/n)?"
+        read installation
+        if [ $installation == y ]; then
+                sudo apt-get install sysbench
+        else
+                echo "package will not be installed. Stop performance check."
+                exit
+        fi
+fi
+
+# performing cpu and ram benchmark
+echo "******************************" | tee -a $result_log
+
+# show cpu information
+lscpu | grep -e "^CPU(s):" -e "Model name:" -e "Thread(s) per core:" -e "CPU MHz:" | tee -a $performance_log
+echo " " | tee -a $performance_log
+
+# run sysbench to check cpu performance
+echo "checking cpu performance: search for all prime numbers between 2 and $sysb_max_prime by using $sysb_threads thread(s). this takes a few seconds..."
+sysb_cpu_result=$(sysbench cpu --num-threads=$sysb_threads --cpu-max-prime=$sysb_max_prime run | grep "total time:")
+
+# display result with date and write to logfile
+echo " "
+echo "$(date +%Y-%m-%dT%H:%M:%S)   $sysb_cpu_result" | tee -a $performance_log
+echo " " | tee -a $performance_log
+
+# filter and display last results
+echo "last $sysb_last_counts results for cpu: "
+grep_status_cpu=$(grep "total time:" $performance_log | tail -n $sysb_last_counts)
+if [ -z "$grep_status_cpu" ]; then
+        echo "no data available"
+else
+        echo "$grep_status_cpu"
+fi
+echo " "
+echo "******************************" | tee -a $performance_log
+echo " "
+
+# show ram information
+cat /proc/meminfo | grep -e "^Mem" | tee -a $performance_log
+echo " " | tee -a $performance_log
+
+# run sysbench to check ram performance
+echo "checking ram performance: write $sysb_ram_transfer in $sysb_ram_blocksize blocks. this takes a few seconds..."
+sysb_ram_result=$(sysbench memory --num-threads=1 --memory-block-size=$sysb_ram_blocksize --memory-total-size=$sysb_ram_transfer run | grep "transferred")
+
+# display result with date and write to logfile
+echo " "
+echo "$(date +%Y-%m-%dT%H:%M:%S)   blocksize: $sysb_ram_blocksize   $sysb_ram_result" | tee -a $performance_log
+echo " " | tee -a $performance_log
+
+# filter last results and display
+echo "last $sysb_last_counts results for ram: "
+grep_status_ram=$(grep "transferred" $performance_log |tail -n $sysb_last_counts)
+if [ -z grep_status_ram ]; then
+        echo "no data available"
+else
+        echo "$(grep "transferred" $performance_log |tail -n $sysb_last_counts)"
+fi
+echo " "
+echo "******************************" | tee -a $performance_log
+echo " "
