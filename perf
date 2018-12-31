@@ -4,15 +4,13 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Check Performance CPU RAM
-# Version 1.0, 30.12.2018
+# Version 1.1, 31.12.2018
 
 # perform sysbench cpu and ram performance test (package sysbench required)
-sysb_test_enabled=0
 sysb_max_prime=10000
 sysb_threads=1
 sysb_ram_transfer="20G"
 sysb_ram_blocksize="1M"
-sysb_ram_result=""
 sysb_ram_last_results=""
 sysb_cpu_last_results=""
 sysb_last_counts=5
@@ -52,7 +50,7 @@ echo " " | tee -a $performance_log
 
 # filter and display last results
 echo "last $sysb_last_counts results for cpu: "
-grep_status_cpu=$(grep "total time:" $performance_log | tail -n $sysb_last_counts)
+grep_status_cpu=$(grep "total time:" $performance_log | tail -n $sysb_last_counts | sort -r)
 if [ -z "$grep_status_cpu" ]; then
         echo "no data available"
 else
@@ -77,11 +75,11 @@ echo " " | tee -a $performance_log
 
 # filter last results and display
 echo "last $sysb_last_counts results for ram: "
-grep_status_ram=$(grep "transferred" $performance_log |tail -n $sysb_last_counts)
+grep_status_ram=$(grep "transferred" $performance_log |tail -n $sysb_last_counts | sort -r)
 if [ -z grep_status_ram ]; then
         echo "no data available"
 else
-        echo "$(grep "transferred" $performance_log |tail -n $sysb_last_counts)"
+        echo "$grep_status_ram"
 fi
 echo " "
 echo "******************************" | tee -a $performance_log
