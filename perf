@@ -4,7 +4,7 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Check Performance CPU RAM
-# Version 1.1, 31.12.2018
+# Version 1.2, 05.01.2018
 
 # perform sysbench cpu and ram performance test (package sysbench required)
 sysb_max_prime=10000
@@ -14,10 +14,13 @@ sysb_ram_blocksize="1M"
 sysb_ram_last_results=""
 sysb_cpu_last_results=""
 sysb_last_counts=5
+sysb_cpu_events_per_sec=""
+sysb_total_events=""
+sysb_lat_avg=""
 status_sysbench=""
 
 #location result log file
-performance_log=/home/telos/monitor/performance.log
+performance_log=./performance.log
 
 # check if package sysbench is installed
 status_sysbench=$(dpkg -s sysbench)
@@ -40,17 +43,28 @@ lscpu | grep -e "^CPU(s):" -e "Model name:" -e "Thread(s) per core:" -e "CPU MHz
 echo " " | tee -a $performance_log
 
 # run sysbench to check cpu performance
-echo "checking cpu performance: search for all prime numbers between 2 and $sysb_max_prime by using $sysb_threads thread(s). this takes a few seconds..."
-sysb_cpu_result=$(sysbench cpu --num-threads=$sysb_threads --cpu-max-prime=$sysb_max_prime run | grep "total time:")
+echo "checking cpu performance: search for all prime numbers between 2 and $sysb_max_prime by using $sysb_threads thread(s). this test runs 10 seconds..."
+sysb_cpu_result=$(sysbench cpu --num-threads=$sysb_threads --cpu-max-prime=$sysb_max_prime run | grep -e "events per second:"  -e  "total number of events:" -e "avg:")
+
+# replace spaces with newline
+sysb_cpu_result_wnl=$(echo $sysb_cpu_result | sed 's/ /\n/g')
+
+# delete empty lines
+sysb_cpu_result_wnl=$(echo "$sysb_cpu_result_wnl" | sed -r '/^\s*$/d')
+
+# read value for cpu event per second, total events and latency average
+sysb_cpu_events_per_sec=$(echo "$sysb_cpu_result_wnl" | sed -n 4p)
+sysb_total_events=$(echo "$sysb_cpu_result_wnl" | sed -n 9p)
+sysb_lat_avg=$(echo "$sysb_cpu_result_wnl" | sed -n 11p)
 
 # display result with date and write to logfile
 echo " "
-echo "$(date +%Y-%m-%dT%H:%M:%S)   $sysb_cpu_result" | tee -a $performance_log
+echo "$(date +%Y-%m-%dT%H:%M:%S)   thread(s): $sysb_threads   max. prime: $sysb_max_prime   events per second: $sysb_cpu_events_per_sec   total number of events: $sysb_total_events   latency avg in ms: $sysb_lat_avg" | tee -a $performance_log
 echo " " | tee -a $performance_log
 
 # filter and display last results
 echo "last $sysb_last_counts results for cpu: "
-grep_status_cpu=$(grep "total time:" $performance_log | tail -n $sysb_last_counts | sort -r)
+grep_status_cpu=$(grep "events per second:" $performance_log | tail -n $sysb_last_counts | sort -r)
 if [ -z "$grep_status_cpu" ]; then
         echo "no data available"
 else
@@ -84,3 +98,4 @@ fi
 echo " "
 echo "******************************" | tee -a $performance_log
 echo " "
+                                                                                                                                                                                                                                                                                                         
