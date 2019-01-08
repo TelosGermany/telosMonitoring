@@ -4,7 +4,7 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Check Performance CPU RAM HDD
-# Version 1.3.2, 08.01.2019
+# Version 1.3.3, 08.01.2019
 
 # cpu counts
 sysb_max_prime=10000
@@ -163,7 +163,7 @@ if [ $nr_performance_check -le $((i-1)) ] && [ $nr_performance_check -gt 1 ]; th
                         exit
                 fi
         echo "run performance check on $mountpoint$path"
-        echo "checking write performance with blocksize $dd_blocksize, count $dd_count..."
+        echo "checking performance with blocksize $dd_blocksize, count $dd_count..."
 
         # run write test and save in variable
         dd_write_result=$(dd if=/dev/zero of=tempfile bs=$dd_blocksize count=$dd_count conv=fdatasync,notrunc 2>&1)
