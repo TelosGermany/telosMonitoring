@@ -4,23 +4,44 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Check Performance CPU RAM
-# Version 1.2, 05.01.2018
+# Version 1.3, 08.01.2019
 
-# perform sysbench cpu and ram performance test (package sysbench required)
+# cpu counts
 sysb_max_prime=10000
 sysb_threads=1
+
+# ram counts
 sysb_ram_transfer="20G"
 sysb_ram_blocksize="1M"
-sysb_ram_last_results=""
-sysb_cpu_last_results=""
+
+# hdd counts
+dd_blocksize="1M"
+dd_count=1024
+
+# last results
 sysb_last_counts=5
+
+# variables
+sysb_ram_last_results=""
+sysb_cpu_lasst_results=""
 sysb_cpu_events_per_sec=""
 sysb_total_events=""
 sysb_lat_avg=""
 status_sysbench=""
+sysb_hd_info=""
+partition_count=0
+nr_performance_check=0
+mountpoint=""
+device=""
+i=2
+path=""
+dd_write_result=""
+dd_read_result=""
+
+declare -A part_info=()
 
 #location result log file
-performance_log=./performance.log
+performance_log=/home/telos/monitor/performance.log
 
 # check if package sysbench is installed
 status_sysbench=$(dpkg -s sysbench)
@@ -35,7 +56,7 @@ if [ -z "$status_sysbench" ]; then
         fi
 fi
 
-# performing cpu and ram benchmark
+# performing cpu, ram and hdd benchmark
 echo "******************************" | tee -a $result_log
 
 # show cpu information
@@ -74,14 +95,6 @@ echo " "
 echo "******************************" | tee -a $performance_log
 echo " "
 
-# show ram information
-cat /proc/meminfo | grep -e "^Mem" | tee -a $performance_log
-echo " " | tee -a $performance_log
-
-# run sysbench to check ram performance
-echo "checking ram performance: write $sysb_ram_transfer in $sysb_ram_blocksize blocks. this takes a few seconds..."
-sysb_ram_result=$(sysbench memory --num-threads=1 --memory-block-size=$sysb_ram_blocksize --memory-total-size=$sysb_ram_transfer run | grep "transferred")
-
 # display result with date and write to logfile
 echo " "
 echo "$(date +%Y-%m-%dT%H:%M:%S)   blocksize: $sysb_ram_blocksize   $sysb_ram_result" | tee -a $performance_log
@@ -98,4 +111,85 @@ fi
 echo " "
 echo "******************************" | tee -a $performance_log
 echo " "
-                                                                                                                                                                                                                                                                                                         
+
+# read partition info, exclude virtual devices
+sysb_hd_info=$(df -h --output=source,fstype,size,used,avail,pcent,target -x tmpfs -x devtmpfs -x squashfs)
+
+# count number of lines
+partition_count=$(echo "$sysb_hd_info" | wc -l)
+
+# print first line
+echo "nr   $sysb_hd_info" | sed -n 1p
+
+# save partitions to variable and display with number
+while [ $i -le $partition_count ]; do
+        part_info[$i]=$(echo "$sysb_hd_info" | sed -n ${i}p)
+        echo "$((i-1))    ${part_info[$i]}" | tee -a $performance_log
+        i=$((i+1));
+done
+echo " "
+
+# question which partition used for performance check
+echo "please choose a mountpoint(nr) for performance check. important: write-access necessary."
+read nr_performance_check
+nr_performance_check=$((nr_performance_check+1))
+
+# check if a valid nr was entered
+if [ $nr_performance_check -le $((i-1)) ] && [ $nr_performance_check -gt 1 ]; then
+        echo " "
+        device=$(echo ${part_info[$nr_performance_check]} | awk '{print $1}')
+        mountpoint=$(echo ${part_info[$nr_performance_check]} | awk '{print $7}')
+        read -p "special directory with write access (optional): $mountpoint" -r path
+        if [ -d "$mountpoint$path" ]; then
+
+                # move to test path
+                cd $mountpoint$path
+                echo " "
+                echo "directory exist"
+
+                # check write access
+                if [ -w "$mountpoint$path" ]; then
+                        echo "write access exist"
+                else
+                        echo "no write access. end script without hdd performance check."
+                        exit
+                fi
+        echo "run performance check on $mountpoint$path"
+        echo "checking write performance with blocksize $dd_blocksize, count $dd_count..."
+
+        # run write test and save in variable
+        dd_write_result=$(dd if=/dev/zero of=tempfile bs=$dd_blocksize count=$dd_count conv=fdatasync,notrunc 2>&1)
+        dd_write_result=$(echo "$dd_write_result" | grep "bytes")
+
+        # to delete buffer cache you have to uncomment the following lines. sudo is required
+        # echo "delete buffer-cache for testing read speed (sudo required)"
+        # echo 3 | sudo tee /proc/sys/vm/drop_caches
+
+        # run read test and save in variable
+        dd_read_result=$(dd if=tempfile of=/dev/null bs=$dd_blocksize count=$dd_count 2>&1)
+        dd_read_result=$(echo "$dd_read_result" | grep "bytes")
+
+        # delete testfile
+        rm $mountpoint$path/tempfile
+
+        # display with date and write to logfile
+        echo " "
+        echo "$(date +%Y-%m-%dT%H:%M:%S)   path: $mountpoint$path   blocksize: $dd_blocksize   count: $dd_count   ***   result write speed: $dd_write_result   ***   result read speed: $dd_read_result   ***" | tee -a $performance_log
+
+        # filter last results and display
+        echo " "
+        echo "last $sysb_last_counts results for hdd: "
+        grep_status_hdd=$(grep "copied" $performance_log | tail -n $sysb_last_counts | sort -r)
+        if [ -z "$grep_status_hdd" ]; then
+                echo "no data available"
+        else
+                echo "$grep_status_hdd"
+        fi
+echo " "
+echo "******************************" | tee -a $performance_log
+else
+                echo "directory does not exist. end script without hdd performance check."
+        fi
+else
+        echo "no mountpoint with the number you entered. end script without hdd performance check."
+fi
