@@ -1,10 +1,10 @@
--#!/bin/bash
+#!/bin/bash
 
 # Author: TelosGermany
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Monitoring Script 
-# Version 1.5, 13.07.2019
+# Version 1.5.1, 25.07.2019
 
 # config file
 source ~/monitor/config
