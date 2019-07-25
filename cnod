@@ -1,0 +1,132 @@
+#!/bin/bash
+
+# Author: TelosGermany
+# Mail: contact@telosgermany.io
+# Telegram: t.me/TelosGermany
+# Start/Stop Script 
+# Version 1.5, 13.07.2019
+
+# config file
+source ~/monitor/config
+
+# Add date to the logfile
+echo $(date +%Y-%m-%dT%H:%M:%S) | tee -a $result_log
+echo "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log
+
+
+if [ "$1" == "start" ]; then
+
+        # if nodeos process does not exist start nodeos  
+        if [ -z "$nodeos_pid" ]; then
+
+                # start nodeos
+                nodeos --data-dir $nodeos_data --config-dir $nodeos_data "$@" > $stdout_log 2> $stderr_log &
+
+                # catch pid
+                sleep 1
+                nodeos_pid=$(pgrep nodeos)
+                if [ -n "$nodeos_pid" ]; then
+
+                        echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos up and running: $nodeos_pid" | tee -a $result_log
+                        echo " "
+                        # Set cpu affinity
+                        # taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
+                else
+                        echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos not running. something must be wrong with the database. please check." | tee -a $result_log
+                fi
+
+                exit
+        fi
+
+# if nodeos already running
+echo " $(date +%Y-%m-%dT%H:%M:%S) nodoes already running" |  tee -a $result_log
+
+fi
+
+if [ "$1" == "stop" ]; then
+
+        # If Nodeos process exist stop nodeos
+        if [ -n "$nodeos_pid" ]; then
+
+                # stop nodeos
+                pkill nodeos
+		sleep 2
+                echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos stopped" | tee -a $result_log
+                exit
+
+        else
+
+                # if nodeos is not running
+                echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos is not running" | tee -a $result_log
+        fi
+fi
+
+if [ "$1" == "restart" ]; then
+
+        # If Nodeos process exist stop nodeos
+        if [ -n "$nodeos_pid" ]; then
+
+                # stop nodeos
+                pkill nodeos
+		sleep 2
+                echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos stopped" | tee -a $result_log
+
+
+        else
+                # if nodeos is not running
+                echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos is not running" | tee -a $result_log
+        fi
+
+        sleep 10
+        nodeos_pid=$(pgrep nodeos)
+        if [ -z "$nodeos_pid" ]; then
+
+                 # start nodeos
+                 nodeos --data-dir $nodeos_data --config-dir $nodeos_data "$@" > $stdout_log 2> $stderr_log &
+
+                # catch pid
+                sleep 1
+                nodeos_pid=$(pgrep nodeos)
+                if [ -n "$nodeos_pid" ]; then
+
+                        echo "$(date +%Y-%m-%dT%H:%M:%S) : nodeos up and running: $nodeos_pid" | tee -a $result_log
+                        echo " "
+                        # Set cpu affinity
+                        # taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
+                else
+                        echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos not running. something must be wrong with the database. please check." | tee -a $result_log
+                fi
+        fi
+fi
+echo " " | tee -a $result_log
+
+if [ "$1" == "dirty_flag" ]; then
+        echo "starting from snapshot $snapshot_download_dir/$dir_extr_snapshot_file/$2"
+
+        # if nodeos process does not exist start nodeos  
+        if [ -z "$nodeos_pid" ]; then
+
+                # start nodeos
+                nodeos --data-dir $nodeos_data  --config-dir $nodeos_data --snapshot $snapshot_download_dir/$dir_extr_snapshot_file/$2 "@" > $stdout_log 2> $stderr_log &
+
+                # catch pid
+                sleep 1
+                nodeos_pid=$(pgrep nodeos)
+                if [ -n "$nodeos_pid" ]; then
+
+                        echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos up and running: $nodeos_pid" | tee -a $result_log
+                        echo " "
+                        # Set cpu affinity
+                        # taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
+                else
+                        echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos not running. something must be wrong with the database. please check." | tee -a $result_log
+                fi
+
+                exit
+        fi
+fi
+
+# reset counter
+echo "0" > $dir_mon/$break_file
+echo "1" > $dir_mon/$restart_count_file
+

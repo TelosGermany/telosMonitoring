@@ -1,0 +1,137 @@
+#snapshot download file tar.gz
+snapshot_download="$(date +%Y-%m-%d)-00-00-05.tar.gz"
+
+#snapshot url
+snapshot_url="https://eosmetal.io/snapshots/telos"
+
+# download snapshot directory
+snapshot_download_dir=/home/telos/telosdata/backup/snapshots
+
+# location extracted snapshot file
+dir_extr_snapshot_file=opt/telos/data-dir/snapshots
+
+# script for restart nodeos
+nodeos_control=/home/telos/cnod
+
+# variable for nodeos pid
+nodeos_pid=$(pgrep nodeos)
+telosportal_pid=$(pgrep "node" -x -o -l)
+
+# minutes wait before checking blocks
+time_wait=5
+
+# definition which ports checked, defined in endpoint.txt
+p2p_port="9876"
+https_port="443"
+http_port="8888"
+portal_port="3000"
+
+# api
+api=https://apinode.telosgermany.io:443
+
+# initial endpoint status
+endpoint_status=0
+
+# initial status portal
+status_portal=1
+
+# name of network interface
+network_interface="ens5"
+
+# request chain info
+chain_request="/v1/chain/get_info"
+
+# directory data
+nodeos_data=/home/telos/telosdata/data
+
+# directory telosportal
+telos_portal=/home/telosportal/telosPortal
+
+# directory monitor 
+dir_mon=/home/telos/monitor
+
+# directory rules
+rules_dir=/home/telos/monitor/rules
+
+# location error definition file
+def_error=/home/telos/monitor/def_error.txt
+
+# location error log file
+error_log=/home/telos/monitor/error.log
+
+#location result log file
+result_log=/home/telos/monitor/result.log
+
+# location stdout.txt
+stdout_log=/home/telos/telosdata/data/stdout.txt
+
+# location log file
+stderr_log=/home/telos/telosdata/data/stderr.txt
+
+# location endpoint file
+endpoint=/home/telos/monitor/endpoint.txt
+
+# backup file
+backup_file=backup_active.txt
+
+# break file
+break_file=break.txt
+
+# error file
+restart_count_file=restart_count.txt
+
+# initial lastreceive_stderr
+lastreceive_stderr=""
+
+# initial break count
+break_count=0
+
+# minimum size for stderr 
+stderr_size=125000
+
+# count of minutes and value for received blocks
+rec_sec=300
+count_block=400
+
+# status incoming blocks
+incoming_blocks="Received"
+
+# bp_name
+bp_name="telosgermany"
+
+# status producer
+status_producer="INACTIVE"
+
+# file for sed
+sed_file=received_blocks
+
+# s3 bucket
+bucket_name=telosgermanybackup
+
+# s3 backup target 
+target=s3://s3.eu-central-1.amazonaws.com/telosgermanybackup
+
+# s3 backup path
+store_path=mainnet/backup
+
+# backup_path_temp
+backup_path_temp=/home/telos/telosdata/backup/copy_nodeos_state
+
+# backup logfile
+backup_log=/home/telos/telosdata/backup/backup.log
+
+# backup type
+backup_type="full"
+
+# current date
+d=$(date +%y-%m-%d)
+
+# minutes to check if system produches blocks
+prodcheck_min=30
+
+# restore logfile
+restore_log=/home/telos/telosdata/backup/restore.log
+
+# backup from days ago
+restore_days_ago=0
+
