@@ -4,7 +4,7 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Monitoring Script 
-# Version 1.5.1, 25.07.2019
+# Version 1.5.2, 27.07.2019
 
 # config file
 source ~/monitor/config
@@ -27,28 +27,19 @@ while read -r protocol address port function; do
                 sed_file=produced_blocks
         fi
 
-        # if port 443,8888, 3000 than curl, for 9876 cat
-        if (($port ==  $https_port)) || (($port == $http_port)) || (($port == $portal_port)); then
-                if (($port == $portal_port)); then
+        # if port 443,8888 than curl, for 9876 cat
+        if (($port ==  $https_port)) || (($port == $http_port)); then
+	# user curl for port 443,8888
+        api_status=$(curl --connect-timeout 2 -s --request POST --url $protocol://$address:$port/$chain_request | wc -m)
+        if (( $api_status >  0 )) ; then
+	        endpoint_status=1
 
-                        # if 3000 
-                        if curl --connect-timeout 2 -s --request POST --url $protocol://$address:$port > /dev/null; then
-                                endpoint_status=1
-                        fi
-                elif (($port == $https_port)) || (($port == $http_port)); then
+                # check if ip is own ip 
+                elif [ $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}') == "$address" ]; then
 
-                        # user curl for port 443,8888
-                        api_status=$(curl --connect-timeout 2 -s --request POST --url $protocol://$address:$port/$chain_request | wc -m)
-                                if (( $api_status >  0 )) ; then
-                                        endpoint_status=1
-
-                                # check if ip is own ip 
-                                elif [ $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}') == "$address" ]; then
-
-                                        # if endpoint 443,8888 (nodeos) not available than increase breakcount
-                                        break_count=$((break_count+1))
-                                         echo "$break_count" > $dir_mon/$break_file
-                                fi
+	                # if endpoint 443,8888 (nodeos) not available than increase breakcount
+	                        break_count=$((break_count+1))
+	                        echo "$break_count" > $dir_mon/$break_file
                 fi
         else
 
@@ -86,7 +77,7 @@ while read -r protocol address port function; do
                         sleep 1
                         telosportal_pid=$(pgrep "node" -x -o -l)
                         echo "$(date +%Y-%m-%dT%H:%M:%S) new process telosportal: $telosportal_pid"
-                        echo  "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log | tee -a $result_log
+                        echo  "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log
                 fi
 
         fi

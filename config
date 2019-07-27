@@ -15,7 +15,6 @@ nodeos_control=/directory/cnod
 
 # variable for nodeos pid
 nodeos_pid=$(pgrep nodeos)
-telosportal_pid=$(pgrep "node" -x -o -l)
 
 # minutes wait before checking blocks
 time_wait=5
@@ -31,9 +30,6 @@ api=https://adress.apinode
 
 # initial endpoint status
 endpoint_status=0
-
-# initial status portal
-status_portal=1
 
 # name of network interface
 network_interface="ens5"
