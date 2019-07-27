@@ -4,7 +4,7 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Monitoring Script 
-# Version 1.5.2, 27.07.2019
+# Version 1.5.3, 27.07.2019
 
 # config file
 source ~/monitor/config
@@ -53,34 +53,6 @@ while read -r protocol address port function; do
         # display result        
         echo "$(date +%Y-%m-%dT%H:%M:%S) $function $protocol://$address:$port Availibility: $endpoint_status" | tee -a $result_log
 
-        # if function portal and status is 0 then set status_portal = 0
-        if [[ "$function" ==  "portal" ]] && [[ $endpoint_status == 0 ]]; then
-                status_portal=0
-                echo "$(date +%Y-%m-%dT%H:%M:%S) minium portal on one node is down." | tee -a $result_log
-
-                # check if telosportal directory exists and if ip is own ip
-                if [ -d "$telos_portal" ] && [ $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}') == "$address" ]; then
-                        echo "$(date +%Y-%m-%dT%H:%M:%S) portal on this node is not responding."
-                        if [ -n "$telosportal_pid" ]; then
-                                echo "$(date +%Y-%m-%dT%H:%M:%S) restart portal." | tee -a $result_log
-
-                                # restart telosportal
-                                echo "$(date +%Y-%m-%dT%H:%M:%S) $telosportal_pid"
-                                kill $(cut -d ' ' -f 1 <<< $telosportal_pid)
-                                echo "$(date +%Y-%m-%dT%H:%M:%S) portal process $telosportal_pid stopped"
-                        fi
-                        echo "$(date +%Y-%m-%dT%H:%M:%S) start portal." | tee -a $result_log
-
-                        # start telosportal
-                        cd /home/telosportal/telosPortal
-                        npm run start:production &>/dev/null &disown;
-                        sleep 1
-                        telosportal_pid=$(pgrep "node" -x -o -l)
-                        echo "$(date +%Y-%m-%dT%H:%M:%S) new process telosportal: $telosportal_pid"
-                        echo  "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log
-                fi
-
-        fi
         endpoint_status=0
 done < "$endpoint"
 
