@@ -4,7 +4,7 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Start/Stop Script 
-# Version 1.5, 13.07.2019
+# Version 1.5.1, 28.07.2019
 
 # config file
 source ~/monitor/config
@@ -30,7 +30,7 @@ if [ "$1" == "start" ]; then
                         echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos up and running: $nodeos_pid" | tee -a $result_log
                         echo " "
                         # Set cpu affinity
-                        # taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
+                        taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
                 else
                         echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos not running. something must be wrong with the database. please check." | tee -a $result_log
                 fi
@@ -92,7 +92,7 @@ if [ "$1" == "restart" ]; then
                         echo "$(date +%Y-%m-%dT%H:%M:%S) : nodeos up and running: $nodeos_pid" | tee -a $result_log
                         echo " "
                         # Set cpu affinity
-                        # taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
+                        taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
                 else
                         echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos not running. something must be wrong with the database. please check." | tee -a $result_log
                 fi
@@ -117,7 +117,7 @@ if [ "$1" == "dirty_flag" ]; then
                         echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos up and running: $nodeos_pid" | tee -a $result_log
                         echo " "
                         # Set cpu affinity
-                        # taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
+                        taskset -cp 1 $nodeos_pid && schedtool -B $nodeos_pid
                 else
                         echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos not running. something must be wrong with the database. please check." | tee -a $result_log
                 fi
