@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Author: TelosGermany
+# Mail: contact@telosgermany.io
+# Telegram: t.me/TelosGermany
+# Stop Script 
+# Version 1.5.5, 14.10.2019
+
+# config file
+source ~/monitor/config
+
+# Add date to the logfile
+echo $(date +%Y-%m-%dT%H:%M:%S) | tee -a $result_log
+echo "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log
+
+# If Nodeos process exist stop nodeos
+if [ -n "$nodeos_pid" ]; then
+
+        # stop nodeos
+        pkill nodeos
+        sleep 2
+        echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos stopped" | tee -a $result_log
+        exit
+else
+
+        # if nodeos is not running
+        echo "$(date +%Y-%m-%dT%H:%M:%S) nodeos is not running" | tee -a $result_log
+        fi
+
+echo " " | tee -a $result_log
+
+# reset counter
+echo "0" > $dir_mon/$break_file
+echo "1" > $dir_mon/$restart_count_file
+

@@ -131,3 +131,8 @@ restore_log=/directory/backup/restore.log
 # backup from days ago
 restore_days_ago=0
 
+# count restore
+count=1
+
+# environment
+env=
