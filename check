@@ -4,7 +4,7 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Monitoring Script 
-# Version 1.5.3, 27.07.2019
+# Version 1.5.4, 14.10.2019
 
 # config file
 source ~/monitor/config
@@ -29,17 +29,17 @@ while read -r protocol address port function; do
 
         # if port 443,8888 than curl, for 9876 cat
         if (($port ==  $https_port)) || (($port == $http_port)); then
-	# user curl for port 443,8888
+        # user curl for port 443,8888
         api_status=$(curl --connect-timeout 2 -s --request POST --url $protocol://$address:$port/$chain_request | wc -m)
         if (( $api_status >  0 )) ; then
-	        endpoint_status=1
+                endpoint_status=1
 
                 # check if ip is own ip 
                 elif [ $(ifconfig $network_interface | grep 'inet' | cut -d: -f2 | awk '{print $2}') == "$address" ]; then
 
-	                # if endpoint 443,8888 (nodeos) not available than increase breakcount
-	                        break_count=$((break_count+1))
-	                        echo "$break_count" > $dir_mon/$break_file
+                        # if endpoint 443,8888 (nodeos) not available than increase breakcount
+                                break_count=$((break_count+1))
+                                echo "$break_count" > $dir_mon/$break_file
                 fi
         else
 
@@ -73,38 +73,38 @@ init_chain_sec=$(date -d $init_chain +%s)
 # Check if stderr.txt > 250 kb or nodeos process is not running or backup is active or initializing chain < 15 min.
 if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || [ -f "$dir_mon/$backup_file" ]  || [[ $init_chain_sec -ge $(date +%s --date '-'$time_wait' min') ]]; then
 
-	#check dirty flag
-	if [ $(tail -n 50 $stderr_log | grep 'database dirty flag set' | wc -l ) -ge 1 ]; then
-        	echo "$(date +%Y-%m-%dT%H:%M:%S) *******************************" | tee -a $result_log
-        	echo "$(date +%Y-%m-%dT%H:%M:%S) DATABASE DIRTY FLAG" | tee -a $result_log
-        	echo "$(date +%Y-%m-%dT%H:%M:%S) *******************************" | tee -a $result_log
-        	link_snapshot="$snapshot_url/$snapshot_download"
-        	echo "$(date +%Y-%m-%dT%H:%M:%S) Download Snapshot: $snapshot_url/$snapshot_download"
-        	wget -P $snapshot_download_dir $snapshot_url/$snapshot_download
-        	cd $snapshot_download_dir
-        	echo "$(date +%Y-%m-%dT%H:%M:%S) extract snapshot"
-        	tar -xvf $snapshot_download_dir/$snapshot_download
-        	$nodeos_control stop
-        	echo "$(date +%Y-%m-%dT%H:%M:%S) delete /blocks/reversible & /state in $nodeos_data"
-        	rm -r $nodeos_data/blocks/reversible
-        	rm -r $nodeos_data/state
-        	cd $snapshot_download_dir/$dir_extr_snapshot_file
-        	bin_file=$(ls *.bin)
-        	echo "$(date +%Y-%m-%dT%H:%M:%S) $bin_file"
-        	echo "$(date +%Y-%m-%dT%H:%M:%S) start nodeos with dirty_flag option"
-        	$nodeos_control dirty_flag $bin_file
-        	ps -elf | grep nodeos
-        	exit
-  	fi
+        #check dirty flag
+        if [ $(tail -n 50 $stderr_log | grep 'database dirty flag set' | wc -l ) -ge 1 ]; then
+                echo "$(date +%Y-%m-%dT%H:%M:%S) *******************************" | tee -a $result_log
+                echo "$(date +%Y-%m-%dT%H:%M:%S) DATABASE DIRTY FLAG" | tee -a $result_log
+                echo "$(date +%Y-%m-%dT%H:%M:%S) *******************************" | tee -a $result_log
+                link_snapshot="$snapshot_url/$snapshot_download"
+                echo "$(date +%Y-%m-%dT%H:%M:%S) Download Snapshot: $snapshot_url/$snapshot_download"
+                wget -P $snapshot_download_dir $snapshot_url/$snapshot_download
+                cd $snapshot_download_dir
+                echo "$(date +%Y-%m-%dT%H:%M:%S) extract snapshot"
+                tar -xvf $snapshot_download_dir/$snapshot_download
+                $nodeos_control"_stop"
+                echo "$(date +%Y-%m-%dT%H:%M:%S) delete /blocks/reversible & /state in $nodeos_data"
+                rm -r $nodeos_data/blocks/reversible
+                rm -r $nodeos_data/state
+                cd $snapshot_download_dir/$dir_extr_snapshot_file
+                bin_file=$(ls *.bin)
+                echo "$(date +%Y-%m-%dT%H:%M:%S) $bin_file"
+                echo "$(date +%Y-%m-%dT%H:%M:%S) start nodeos with dirty_flag option"
+                $nodeos_control"_dirty_flag" $bin_file
+                ps -elf | grep nodeos
+                exit
+        fi
 
-	if [ -f "$dir_mon/$backup_file" ]; then
+        if [ -f "$dir_mon/$backup_file" ]; then
                 echo "$(date +%Y-%m-%dT%H:%M:%S) currently backup is active. nodeos not running. not checking stderr.txt" | tee -a $result_log
                 exit
 
-	elif [[ $init_chain_sec -ge $(date +%s --date '-'$time_wait' min') ]] && [ -n "$nodeos_pid" ]; then
+        elif [[ $init_chain_sec -ge $(date +%s --date '-'$time_wait' min') ]] && [ -n "$nodeos_pid" ]; then
                 echo "$(date +%Y-%m-%dT%H:%M:%S) initializing chain less than $time_wait minutes. not checking $stderr_log" | tee -a $result_log
                 exit
-  	fi
+        fi
 
         # read first charakter of break.txt
         break_count=$(head -c 1 $dir_mon/$break_file)
@@ -120,13 +120,13 @@ if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || 
                 else
 
                         # stop and restart nodeos
-                        $nodeos_control restart
+                        $nodeos_control"_restart"
                         exit
                 fi
         else
 
                 # nodeos process is not running, start nodeos via cnod
-                $nodeos_control start
+                $nodeos_control"_start"
                 exit
         fi
         echo "$(date +%Y-%m-%dT%H:%M:%S) not checking stderr.txt" | tee -a $result_log
@@ -176,7 +176,7 @@ else
         echo  "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log
 
         if [[ ${restart_count:0:1} -ge  3 ]]; then
-                $nodeos_control restart
+                $nodeos_control"_restart"
                 echo "1" > $dir_mon/$restart_count_file
         else
                 if (( $restart_count > 99 )); then
@@ -211,3 +211,4 @@ else
         # reset break count
         echo "0" > $dir_mon/$break_file
 fi
+
