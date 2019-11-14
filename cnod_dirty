@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Author: TelosGermany
+# Mail: contact@telosgermany.io
+# Telegram: t.me/TelosGermany
+# Dirty Flag  Script 
+# Version 1.5.6, 14.11.2019
+
+# config file
+source /home/telos/monitor/config
+
+# Add date to the logfile
+echo $(date +%Y-%m-%dT%H:%M:%S) | tee -a $result_log
+echo "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log
+
+
+echo "starting from snapshot $snapshot_download_dir/$dir_extr_snapshot_file/$1" | tee -a $result_log
+
+# if nodeos process does not exist start nodeos  
+if [ -z "$nodeos_pid" ]; then
+
+        # start nodeos
+        nodeos --data-dir $nodeos_data  --config-dir $nodeos_data --snapshot $snapshot_download_dir/$dir_extr_snapshot_file/$1 "@" > $stdout_log 2> $stderr_log &
+
+        # catch pid
+        sleep 1 
+fi
+echo " " | tee -a $result_log
+
+# reset counter
+echo "0" > $dir_mon/$break_file
+echo "1" > $dir_mon/$restart_count_file
+touch $dir_mon/backup_active.txt
+
