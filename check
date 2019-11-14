@@ -4,7 +4,7 @@
 # Mail: contact@telosgermany.io
 # Telegram: t.me/TelosGermany
 # Monitoring Script 
-# Version 1.5.5, 14.10.2019
+# Version 1.5.6, 14.11.2019
 
 # config file
 source ~/monitor/config
@@ -79,20 +79,21 @@ if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || 
                 echo "$(date +%Y-%m-%dT%H:%M:%S) DATABASE DIRTY FLAG" | tee -a $result_log
                 echo "$(date +%Y-%m-%dT%H:%M:%S) *******************************" | tee -a $result_log
                 link_snapshot="$snapshot_url/$snapshot_download"
-                echo "$(date +%Y-%m-%dT%H:%M:%S) Download Snapshot: $snapshot_url/$snapshot_download"
-                wget -P $snapshot_download_dir $snapshot_url/$snapshot_download
+                echo "$(date +%Y-%m-%dT%H:%M:%S) Download Snapshot: $snapshot_url/$snapshot_download" | tee -a $result_log
+                wget -P $snapshot_download_dir $snapshot_url/$snapshot_download | tee -a $result_log
                 cd $snapshot_download_dir
-                echo "$(date +%Y-%m-%dT%H:%M:%S) extract snapshot"
-                tar -xvf $snapshot_download_dir/$snapshot_download
-                $nodeos_control"_stop"
-                echo "$(date +%Y-%m-%dT%H:%M:%S) delete /blocks/reversible & /state in $nodeos_data"
-                rm -r $nodeos_data/blocks/reversible
-                rm -r $nodeos_data/state
+                echo "$(date +%Y-%m-%dT%H:%M:%S) extract snapshot" | tee -a $result_log
+                tar -xvf $snapshot_download_dir/$snapshot_download | tee -a $result_log
+                $nodeos_control"_stop" | tee -a $result_log
+                echo "$(date +%Y-%m-%dT%H:%M:%S) delete /blocks/reversible & /state in $nodeos_data" | tee -a $result_log
+                rm -r $nodeos_data/blocks/reversible | tee -a $result_log
+                rm -r $nodeos_data/state | tee -a $result_log
                 cd $snapshot_download_dir/$dir_extr_snapshot_file
                 bin_file=$(ls *.bin)
-                echo "$(date +%Y-%m-%dT%H:%M:%S) $bin_file"
-                echo "$(date +%Y-%m-%dT%H:%M:%S) start nodeos with dirty_flag option"
-                $nodeos_control"_dirty_flag" $bin_file
+                echo "$(date +%Y-%m-%dT%H:%M:%S) $bin_file" | tee -a $result_log
+                echo "$(date +%Y-%m-%dT%H:%M:%S) start nodeos with dirty_flag option" | tee -a $result_log
+                $nodeos_control"_dirty" "$bin_file"
+                # $nodeos_control"_dirty" $bin_file
                 ps -elf | grep nodeos
                 exit
         fi
@@ -130,7 +131,7 @@ if [[ $(stat -c%s $stderr_log) -lt $stderr_size   ]] || [ -z "$nodeos_pid" ] || 
                 exit
         fi
         echo "$(date +%Y-%m-%dT%H:%M:%S) not checking stderr.txt" | tee -a $result_log
-        echo " " | tee -a $result_log
+     	echo " " | tee -a $result_log
 else
 
         # cut hours and minute from last received block entry 
@@ -175,7 +176,7 @@ else
         echo "$(date +%Y-%m-%dT%H:%M:%S) check amount of $incoming_blocks blocks, blocks: $blocks, $status" | tee -a $result_log
         echo  "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log
 
-        if [[ ${restart_count:0:1} -ge  3 ]]; then
+        if [[ ${restart_count:0:1} -ge 6 ]]; then
                 $nodeos_control"_restart"
                 echo "1" > $dir_mon/$restart_count_file
         else
@@ -211,4 +212,6 @@ else
         # reset break count
         echo "0" > $dir_mon/$break_file
 fi
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
 
