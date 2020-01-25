@@ -73,6 +73,9 @@ backup_file=backup_active.txt
 # break file
 break_file=break.txt
 
+# treshold error
+error_treshold=6
+
 # error file
 restart_count_file=restart_count.txt
 
