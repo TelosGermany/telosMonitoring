@@ -176,8 +176,8 @@ else
         echo "$(date +%Y-%m-%dT%H:%M:%S) check amount of $incoming_blocks blocks, blocks: $blocks, $status" | tee -a $result_log
         echo  "$(date +%Y-%m-%dT%H:%M:%S) ******************************" | tee -a $result_log
 
-        if [[ ${restart_count:0:1} -ge 6 ]]; then
-                $nodeos_control"_restart"
+     	if [[ ${restart_count:0:1} -ge $error_treshold ]]; then
+		$nodeos_control"_restart"
                 echo "1" > $dir_mon/$restart_count_file
         else
                 if (( $restart_count > 99 )); then
